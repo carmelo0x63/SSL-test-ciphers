@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Scans a remote host to display all available common TLS ciphers
-# author: ccalifan@cisco.com
+# author: carmelo.califano@gmail.com
 # history, date format ISO 8601:
 #  2016-10-14: 1.0 initial version
 
