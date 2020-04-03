@@ -10,6 +10,7 @@ import argparse				# write user-friendly command-line interfaces
 import os				# use operating system dependent functionalities
 import subprocess			# spawn new processes, connect to their input/output/error pipes, and obtain their return codes
 import sys				# variables used or maintained by the interpreter and functions that interact strongly with the interpreter
+from multiprocessing import Process
 
 # Version number
 __version__ = "2.0"
@@ -51,7 +52,10 @@ def clientConnect(cipher, ipaddr, portn):
     except:
         sslout = b':error:'
 
-    return sslout.decode()
+    if ":error:" in sslout.decode():
+        print(bcolors.FAIL + '[-] ' + cipher + ' NOT supported!' + bcolors.ENDC)
+    else:
+        print(bcolors.OKBLUE + '[+] ' + cipher + ' supported!!!' + bcolors.ENDC)
 
 def main():
     parser = argparse.ArgumentParser(description='Scans <IP address>:<IP address> querying all the supported TLS ciphers, version ' + __version__ + ', build ' + __build__ + '.', epilog=EPILOG)
@@ -86,12 +90,12 @@ def main():
     # Transform string into a list
 #    lCiphers = myCiphers.decode().rstrip('\n').split(':')
     lCiphers = ['TLS_AES_256_GCM_SHA384', 'TLS_CHACHA20_POLY1305_SHA256', 'TLS_AES_128_GCM_SHA256', 'ECDHE-ECDSA-AES256-GCM-SHA384', 'ECDHE-RSA-AES256-GCM-SHA384', 'DHE-DSS-AES256-GCM-SHA384', 'DHE-RSA-AES256-GCM-SHA384', 'ECDHE-ECDSA-CHACHA20-POLY1305']
-    for item in lCiphers:
-        result = clientConnect(item, args.ipAdd, args.whichPort)
-        if ":error:" in result:
-            print(bcolors.FAIL + '[-] ' + item + ' NOT supported!' + bcolors.ENDC)
-        else:
-            print(bcolors.OKBLUE + '[+] ' + item + ' supported!!!' + bcolors.ENDC)
+    for cipher in lCiphers:
+#        clientConnect(cipher, args.ipAdd, args.whichPort)
+        result = Process(target=clientConnect, args=(cipher, args.ipAdd, args.whichPort, ))
+        result.start()
+        result.join(timeout = 1)
+        result.terminate()
       
 if __name__ == '__main__':
   main()
