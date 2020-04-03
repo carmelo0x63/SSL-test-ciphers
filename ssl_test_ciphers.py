@@ -28,65 +28,70 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 def validIP(ipAddrs):
-  # Split the input string into a list of octets
-  octList = ipAddrs.split('.')
-  # Must contain 4 octets
-  if len(octList) != 4:
-      return False
-  # Each octet must be a digit AND between 0 and 255
-  for x in octList:
-      if not x.isdigit():
-          return False
-      i = int(x)
-      if i < 0 or i > 255:
-          return False
-  return True
+    # Split the input string into a list of octets
+    octList = ipAddrs.split('.')
+    # Must contain 4 octets
+    if len(octList) != 4:
+        return False
+    # Each octet must be a digit AND between 0 and 255
+    for x in octList:
+        if not x.isdigit():
+            return False
+        i = int(x)
+        if i < 0 or i > 255:
+            return False
+    return True
 
-def main():
-  parser = argparse.ArgumentParser(description='Scans <IP address>:<IP address> querying all the supported TLS ciphers, version ' + __version__ + ', build ' + __build__ + '.', epilog=EPILOG)
-  parser.add_argument('ipAdd', metavar='<IP address>', type=str, help='IP address of the host to scan for ciphers')
-  parser.add_argument('whichPort', metavar='<Port number>', type=str, help='Port number, usually equals 443')
-  parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__ + '')
-
-  # In case of no arguments print help message then exits
-  if len(sys.argv) == 1:
-    parser.print_help()
-    sys.exit(1)
-  else:
-    args = parser.parse_args() # else parse command line
-
-  # Let's validate input
-  if not validIP(args.ipAdd):
-    print('[-] Address is not a valid IPv4 one!')
-    print('[-] Exiting...', end='\n\n')
-    sys.exit(2)
-
-  if (int(args.whichPort) < 1) or (int(args.whichPort) > 65535):
-    print('[-] Port out of range!')
-    print('[-] Exiting...', end='\n\n')
-    sys.exit(3)
-
-  # If input is OK we can continue. First we fetch the output of openssl ciphers run on the local machine
-  # this will give us a string with all the locally supported ciphers
-  sslVer = subprocess.check_output(['openssl', 'version'])
-  print('[+] ' + os.uname()[0] + ' version ' + os.uname()[2] + ' running on ' + os.uname()[4] + ' platform')
-  print('[+] ' + sslVer.decode().rstrip() + ', fetching the list of locally supported ciphers...')
-  myCiphers = subprocess.check_output(['openssl', 'ciphers', 'ALL:eNULL'])
-  # Transform string into a list
-  lCiphers = myCiphers.decode().rstrip('\n').split(':')
-  for item in lCiphers:
+def clientConnect(cipher, ipaddr, portn):
     # Here we build the command string, stderr is redirected to stdout to keep output clean
-    cmdstr = 'echo -n | openssl s_client -cipher ' + item + ' -connect ' + args.ipAdd + ':' + args.whichPort + ' 2>&1'
+    cmdstr = 'echo -n | openssl s_client -cipher ' + cipher + ' -connect ' + ipaddr + ':' + portn + ' 2>&1'
     # Send the command string to subprocess for execution
     try:
-        sslout = subprocess.check_output(cmdstr, shell=True, stderr=subprocess.STDOUT)
+        sslout = subprocess.check_output(cmdstr, shell = True, stderr = subprocess.STDOUT)
     except:
         sslout = b':error:'
 
-    if ":error:" in sslout.decode():
-      print(bcolors.FAIL + '[-] ' + item + ' NOT supported!' + bcolors.ENDC)
+    return sslout.decode()
+
+def main():
+    parser = argparse.ArgumentParser(description='Scans <IP address>:<IP address> querying all the supported TLS ciphers, version ' + __version__ + ', build ' + __build__ + '.', epilog=EPILOG)
+    parser.add_argument('ipAdd', metavar='<IP address>', type=str, help='IP address of the host to scan for ciphers')
+    parser.add_argument('whichPort', metavar='<Port number>', type=str, help='Port number, usually equals 443')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__ + '')
+
+    # In case of no arguments print help message then exits
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
     else:
-      print(bcolors.OKBLUE + '[+] ' + item + ' supported!!!' + bcolors.ENDC)
+        args = parser.parse_args() # else parse command line
+
+    # Let's validate input
+    if not validIP(args.ipAdd):
+        print('[-] Address is not a valid IPv4 one!')
+        print('[-] Exiting...', end='\n\n')
+        sys.exit(2)
+
+    if (int(args.whichPort) < 1) or (int(args.whichPort) > 65535):
+        print('[-] Port out of range!')
+        print('[-] Exiting...', end='\n\n')
+        sys.exit(3)
+
+    # If input is OK we can continue. First we fetch the output of openssl ciphers run on the local machine
+    # this will give us a string with all the locally supported ciphers
+    sslVer = subprocess.check_output(['openssl', 'version'])
+    print('[+] ' + os.uname()[0] + ' version ' + os.uname()[2] + ' running on ' + os.uname()[4] + ' platform')
+    print('[+] ' + sslVer.decode().rstrip() + ', fetching the list of locally supported ciphers...')
+    myCiphers = subprocess.check_output(['openssl', 'ciphers', 'ALL:eNULL'])
+    # Transform string into a list
+#    lCiphers = myCiphers.decode().rstrip('\n').split(':')
+    lCiphers = ['TLS_AES_256_GCM_SHA384', 'TLS_CHACHA20_POLY1305_SHA256', 'TLS_AES_128_GCM_SHA256', 'ECDHE-ECDSA-AES256-GCM-SHA384', 'ECDHE-RSA-AES256-GCM-SHA384', 'DHE-DSS-AES256-GCM-SHA384', 'DHE-RSA-AES256-GCM-SHA384', 'ECDHE-ECDSA-CHACHA20-POLY1305']
+    for item in lCiphers:
+        result = clientConnect(item, args.ipAdd, args.whichPort)
+        if ":error:" in result:
+            print(bcolors.FAIL + '[-] ' + item + ' NOT supported!' + bcolors.ENDC)
+        else:
+            print(bcolors.OKBLUE + '[+] ' + item + ' supported!!!' + bcolors.ENDC)
       
 if __name__ == '__main__':
   main()
