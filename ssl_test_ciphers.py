@@ -87,12 +87,12 @@ def main():
     print('[+] ' + os.uname()[0] + ' version ' + os.uname()[2] + ' running on ' + os.uname()[4] + ' platform')
     print('[+] ' + sslVer.decode().rstrip() + ', fetching the list of locally supported ciphers...')
     myCiphers = subprocess.check_output(['openssl', 'ciphers', 'ALL:eNULL'])
+
     # Transform string into a list
-#    lCiphers = myCiphers.decode().rstrip('\n').split(':')
-    lCiphers = ['TLS_AES_256_GCM_SHA384', 'TLS_CHACHA20_POLY1305_SHA256', 'TLS_AES_128_GCM_SHA256', 'ECDHE-ECDSA-AES256-GCM-SHA384', 'ECDHE-RSA-AES256-GCM-SHA384', 'DHE-DSS-AES256-GCM-SHA384', 'DHE-RSA-AES256-GCM-SHA384', 'ECDHE-ECDSA-CHACHA20-POLY1305']
+    lCiphers = myCiphers.decode().rstrip('\n').split(':')
+
     for cipher in lCiphers:
-#        clientConnect(cipher, args.ipAdd, args.whichPort)
-        result = Process(target=clientConnect, args=(cipher, args.ipAdd, args.whichPort, ))
+        result = Process(target=clientConnect, args=(cipher, args.ipAdd, args.whichPort,))
         result.start()
         result.join(timeout = 1)
         result.terminate()
